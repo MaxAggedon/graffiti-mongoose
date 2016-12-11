@@ -29,7 +29,7 @@ import query, {
   connectionFromModel
 } from './../query';
 import { addHooks } from '../utils';
-import viewerInstance from '../model/viewer';
+// import viewerInstance from '../model/viewer';
 import createInputObject from '../type/custom/to-input-object';
 
 const idField = {
@@ -107,7 +107,7 @@ function getConnectionField(graffitiModel, type, hooks = {}) {
   };
 }
 
-function getMutationField(graffitiModel, type, viewer, hooks = {}, allowMongoIDMutation) {
+function getMutationField(graffitiModel, type, hooks = {}, allowMongoIDMutation) {
   const { name } = type;
   const { mutation } = hooks;
 
@@ -170,7 +170,7 @@ function getMutationField(graffitiModel, type, viewer, hooks = {}, allowMongoIDM
       name: addName,
       inputFields,
       outputFields: {
-        viewer,
+        // viewer,
         [edgeName]: {
           type: connectionDefinitions({
             name: changedName,
@@ -208,7 +208,7 @@ function getMutationField(graffitiModel, type, viewer, hooks = {}, allowMongoIDM
         id: idField
       },
       outputFields: {
-        viewer,
+        // viewer,
         ok: {
           type: GraphQLBoolean
         },
@@ -232,24 +232,24 @@ function getFields(graffitiModels, {
   const types = type.getTypes(graffitiModels);
   const { viewer, singular } = hooks;
 
-  const viewerFields = reduce(types, (fields, type, key) => {
-    type.name = type.name || key;
-    const graffitiModel = graffitiModels[type.name];
-    return {
-      ...fields,
-      ...getConnectionField(graffitiModel, type, hooks),
-      ...getSingularQueryField(graffitiModel, type, hooks)
-    };
-  }, {
-    id: globalIdField('Viewer')
-  });
-  setTypeFields(GraphQLViewer, viewerFields);
+  // const viewerFields = reduce(types, (fields, type, key) => {
+  //   type.name = type.name || key;
+  //   const graffitiModel = graffitiModels[type.name];
+  //   return {
+  //     ...fields,
+  //     ...getConnectionField(graffitiModel, type, hooks),
+  //     ...getSingularQueryField(graffitiModel, type, hooks)
+  //   };
+  // }, {
+  //   id: globalIdField('Viewer')
+  // });
+  // setTypeFields(GraphQLViewer, viewerFields);
 
-  const viewerField = {
-    name: 'Viewer',
-    type: GraphQLViewer,
-    resolve: addHooks(() => viewerInstance, viewer)
-  };
+  // const viewerField = {
+  //   name: 'Viewer',
+  //   type: GraphQLViewer,
+  //   resolve: addHooks(() => viewerInstance, viewer)
+  // };
 
   const { queries, mutations } = reduce(types, ({ queries, mutations }, type, key) => {
     type.name = type.name || key;
@@ -261,7 +261,7 @@ function getFields(graffitiModels, {
       },
       mutations: {
         ...mutations,
-        ...getMutationField(graffitiModel, type, viewerField, hooks, allowMongoIDMutation)
+        ...getMutationField(graffitiModel, type, hooks, allowMongoIDMutation)
       }
     };
   }, {
@@ -273,11 +273,24 @@ function getFields(graffitiModels, {
       : customMutations
   });
 
+  function getViewer(auth0ID) {
+    return new Promise((resolve, reject) => {
+      graffitiModels['User'].model
+        .findOne({'auth0ID': 'auth0|5838074c45cc13f8065d92e8'},(err, user) => {
+          if (err) reject(err)
+          else resolve(user)
+        })
+    })
+  }
+
   const RootQuery = new GraphQLObjectType({
     name: 'RootQuery',
     fields: {
       ...queries,
-      viewer: viewerField,
+      viewer: {
+        type: types['User'],
+        resolve: (_, args, context) => getViewer(context.sub),
+      },
       node: {
         name: 'node',
         description: 'Fetches an object given its ID',
